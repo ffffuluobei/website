@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Close Button</title>
+    <title>Banana Rain</title>
     <style>
         * {
             margin: 0;
@@ -12,51 +12,141 @@
         }
         body {
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            position: relative;
         }
-        .close-btn {
-            padding: 20px 60px;
-            font-size: 24px;
-            font-weight: 600;
+        .banana-btn {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 25px 70px;
+            font-size: 28px;
+            font-weight: 700;
             color: white;
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             border: none;
-            border-radius: 50px;
+            border-radius: 60px;
             cursor: pointer;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            transition: all 0.2s ease;
+            z-index: 1000;
+            user-select: none;
         }
-        .close-btn:hover {
-            transform: translateY(-5px) scale(1.05);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        .banana-btn:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
         }
-        .close-btn:active {
-            transform: translateY(0) scale(0.98);
+        .banana-btn:active {
+            transform: translate(-50%, -50%) scale(0.95);
         }
-        .close-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            transition: left 0.5s ease;
+        .banana {
+            position: fixed;
+            font-size: 60px;
+            pointer-events: none;
+            z-index: 1;
+            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.2));
         }
-        .close-btn:hover::before {
-            left: 100%;
+        .ground {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: linear-gradient(to top, rgba(0,0,0,0.3), transparent);
         }
     </style>
 </head>
 <body>
-    <button class="close-btn" onclick="window.close()">
-        CLOSE
-    </button>
+    <button class="banana-btn" id="btn">🍌</button>
+    <div class="ground"></div>
+
+    <script>
+        const btn = document.getElementById('btn');
+        const bananas = [];
+        const MAX_BANANAS = 10;
+        const GRAVITY = 0.5;
+        const BOUNCE = 0.6;
+        const FRICTION = 0.99;
+
+        class Banana {
+            constructor(x) {
+                this.element = document.createElement('div');
+                this.element.className = 'banana';
+                this.element.textContent = '🍌';
+                document.body.appendChild(this.element);
+                
+                this.x = x;
+                this.y = -60;
+                this.vx = (Math.random() - 0.5) * 8;
+                this.vy = Math.random() * 2;
+                this.rotation = 0;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.3;
+                
+                this.updatePosition();
+            }
+            
+            updatePosition() {
+                this.element.style.left = this.x + 'px';
+                this.element.style.top = this.y + 'px';
+                this.element.style.transform = `rotate(${this.rotation}rad)`;
+            }
+            
+            update() {
+                this.vy += GRAVITY;
+                this.vx *= FRICTION;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.rotation += this.rotationSpeed + this.vx * 0.01;
+                
+                const groundY = window.innerHeight - 80;
+                if (this.y > groundY) {
+                    this.y = groundY;
+                    this.vy = -this.vy * BOUNCE;
+                    this.vx *= 0.8;
+                    
+                    if (Math.abs(this.vy) < 2) {
+                        this.vy = 0;
+                    }
+                }
+                
+                if (this.x < 0) {
+                    this.x = 0;
+                    this.vx = -this.vx * BOUNCE;
+                }
+                if (this.x > window.innerWidth - 60) {
+                    this.x = window.innerWidth - 60;
+                    this.vx = -this.vx * BOUNCE;
+                }
+                
+                this.updatePosition();
+            }
+            
+            remove() {
+                this.element.remove();
+            }
+        }
+
+        function animate() {
+            bananas.forEach(banana => banana.update());
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        btn.addEventListener('click', () => {
+            const rect = btn.getBoundingClientRect();
+            const x = rect.left + Math.random() * rect.width;
+            
+            const banana = new Banana(x);
+            bananas.push(banana);
+            
+            if (bananas.length > MAX_BANANAS) {
+                const oldBanana = bananas.shift();
+                oldBanana.remove();
+            }
+        });
+    </script>
 </body>
 </html>
