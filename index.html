@@ -135,13 +135,14 @@
             }
         }
 
+        const objects = [];
+
         function animate() {
             objects.forEach(obj => obj.update());
             requestAnimationFrame(animate);
         }
         animate();
 
-        const objects = [];
         btn.addEventListener('click', () => {
             const rect = btn.getBoundingClientRect();
             const x = rect.left + Math.random() * rect.width;
