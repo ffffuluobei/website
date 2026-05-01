@@ -65,17 +65,16 @@
 
     <script>
         const btn = document.getElementById('btn');
-        const bananas = [];
-        const MAX_BANANAS = 10;
+        const MAX_OBJECTS = 10;
         const GRAVITY = 0.5;
         const BOUNCE = 0.6;
         const FRICTION = 0.99;
 
-        class Banana {
-            constructor(x) {
+        class FallingObject {
+            constructor(x, emoji) {
                 this.element = document.createElement('div');
                 this.element.className = 'banana';
-                this.element.textContent = '🍌';
+                this.element.textContent = emoji;
                 document.body.appendChild(this.element);
                 
                 this.x = x;
@@ -137,21 +136,26 @@
         }
 
         function animate() {
-            bananas.forEach(banana => banana.update());
+            objects.forEach(obj => obj.update());
             requestAnimationFrame(animate);
         }
         animate();
 
+        const objects = [];
         btn.addEventListener('click', () => {
             const rect = btn.getBoundingClientRect();
             const x = rect.left + Math.random() * rect.width;
             
-            const banana = new Banana(x);
-            bananas.push(banana);
+            // 5% 概率掉蜘蛛，95% 概率掉香蕉
+            const isSpider = Math.random() < 0.05;
+            const emoji = isSpider ? '🕷️' : '🍌';
             
-            if (bananas.length > MAX_BANANAS) {
-                const oldBanana = bananas.shift();
-                oldBanana.remove();
+            const obj = new FallingObject(x, emoji);
+            objects.push(obj);
+            
+            if (objects.length > MAX_OBJECTS) {
+                const oldObj = objects.shift();
+                oldObj.remove();
             }
         });
     </script>
