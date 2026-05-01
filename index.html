@@ -101,6 +101,8 @@
                 this.y += this.vy;
                 
                 const groundY = window.innerHeight - 80;
+                const isOnGround = this.y >= groundY - 5;
+                
                 if (this.y > groundY) {
                     this.y = groundY;
                     this.vy = -this.vy * BOUNCE;
@@ -120,9 +122,9 @@
                     this.vx = -this.vx * BOUNCE;
                 }
                 
-                // 只有当香蕉还在运动时才旋转
+                // 只有落地后完全静止了才停止旋转
                 const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-                if (speed > 2) {
+                if (!isOnGround || speed > 2) {
                     this.rotation += this.rotationSpeed + this.vx * 0.01;
                 }
                 
