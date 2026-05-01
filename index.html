@@ -99,7 +99,6 @@
                 this.vx *= FRICTION;
                 this.x += this.vx;
                 this.y += this.vy;
-                this.rotation += this.rotationSpeed + this.vx * 0.01;
                 
                 const groundY = window.innerHeight - 80;
                 if (this.y > groundY) {
@@ -119,6 +118,12 @@
                 if (this.x > window.innerWidth - 60) {
                     this.x = window.innerWidth - 60;
                     this.vx = -this.vx * BOUNCE;
+                }
+                
+                // 只有当香蕉还在运动时才旋转
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (speed > 2) {
+                    this.rotation += this.rotationSpeed + this.vx * 0.01;
                 }
                 
                 this.updatePosition();
