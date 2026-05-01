@@ -57,6 +57,13 @@
             height: 20px;
             background: linear-gradient(to top, rgba(0,0,0,0.3), transparent);
         }
+        .monkey {
+            position: fixed;
+            font-size: 80px;
+            pointer-events: none;
+            z-index: 100;
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.4));
+        }
     </style>
 </head>
 <body>
@@ -65,13 +72,14 @@
 
     <script>
         const btn = document.getElementById('btn');
-        const MAX_OBJECTS = 10;
+        const MAX_OBJECTS = 150;
         const GRAVITY = 0.5;
         const BOUNCE = 0.6;
         const FRICTION = 0.99;
+        const MONKEY_SPAWN_THRESHOLD = 15;
 
         class FallingObject {
-            constructor(x, emoji) {
+            constructor(x, emoji, isSpider = false) {
                 this.element = document.createElement('div');
                 this.element.className = 'banana';
                 this.element.textContent = emoji;
@@ -83,6 +91,8 @@
                 this.vy = Math.random() * 2;
                 this.rotation = 0;
                 this.rotationSpeed = (Math.random() - 0.5) * 0.3;
+                this.isSpider = isSpider;
+                this.isBeingEaten = false;
                 
                 this.updatePosition();
             }
@@ -94,6 +104,8 @@
             }
             
             update() {
+                if (this.isBeingEaten) return;
+                
                 this.vy += GRAVITY;
                 this.vx *= FRICTION;
                 this.x += this.vx;
@@ -135,10 +147,139 @@
             }
         }
 
+        class Monkey {
+            constructor() {
+                this.element = document.createElement('div');
+                this.element.className = 'monkey';
+                this.element.textContent = '🐵';
+                document.body.appendChild(this.element);
+                
+                this.x = -80;
+                this.y = window.innerHeight - 140;
+                this.target = null;
+                this.state = 'entering'; // entering, moving, eating, throwing, leaving
+                this.eatTimer = 0;
+                this.throwTimer = 0;
+                this.throwTarget = null;
+                
+                this.updatePosition();
+            }
+            
+            updatePosition() {
+                this.element.style.left = this.x + 'px';
+                this.element.style.top = this.y + 'px';
+            }
+            
+            update() {
+                switch (this.state) {
+                    case 'entering':
+                        this.x += 3;
+                        if (this.x >= 50) {
+                            this.state = 'moving';
+                        }
+                        break;
+                        
+                    case 'moving':
+                        // 找最近的物体
+                        let closest = null;
+                        let closestDist = Infinity;
+                        
+                        objects.forEach(obj => {
+                            if (!obj.isBeingEaten) {
+                                const dist = Math.abs(obj.x - this.x);
+                                if (dist < closestDist) {
+                                    closestDist = dist;
+                                    closest = obj;
+                                }
+                            }
+                        });
+                        
+                        if (closest) {
+                            this.target = closest;
+                            if (Math.abs(this.x - closest.x) < 10) {
+                                // 到达目标，开始吃
+                                this.state = closest.isSpider ? 'throwing' : 'eating';
+                                closest.isBeingEaten = true;
+                                this.eatTimer = 0;
+                                this.throwTimer = 0;
+                            } else {
+                                // 向目标移动
+                                this.x += closest.x > this.x ? 4 : -4;
+                            }
+                        } else {
+                            // 没有食物了，离开
+                            this.state = 'leaving';
+                        }
+                        break;
+                        
+                    case 'eating':
+                        this.eatTimer++;
+                        // 吃的动画：上下跳动
+                        this.y = window.innerHeight - 140 + Math.sin(this.eatTimer * 0.3) * 10;
+                        
+                        if (this.eatTimer > 30) {
+                            // 吃完了
+                            const idx = objects.indexOf(this.target);
+                            if (idx > -1) {
+                                objects.splice(idx, 1);
+                                this.target.remove();
+                            }
+                            this.state = 'moving';
+                            this.y = window.innerHeight - 140;
+                        }
+                        break;
+                        
+                    case 'throwing':
+                        this.throwTimer++;
+                        
+                        if (this.throwTimer < 30) {
+                            // 拿起蜘蛛的动画
+                            this.y = window.innerHeight - 140 - this.throwTimer;
+                            if (this.target) {
+                                this.target.x = this.x + 20;
+                                this.target.y = this.y - 30;
+                                this.target.updatePosition();
+                            }
+                        } else if (this.throwTimer === 30) {
+                            // 用力扔出去！
+                            if (this.target) {
+                                this.target.isBeingEaten = false;
+                                this.target.vx = (Math.random() > 0.5 ? 1 : -1) * 15;
+                                this.target.vy = -12;
+                                this.target.rotationSpeed = 1;
+                            }
+                        } else if (this.throwTimer > 60) {
+                            // 扔完了，继续找食物
+                            this.state = 'moving';
+                            this.y = window.innerHeight - 140;
+                        }
+                        break;
+                        
+                    case 'leaving':
+                        this.x -= 3;
+                        if (this.x < -100) {
+                            // 完全离开屏幕，移除自己
+                            const idx = monkeys.indexOf(this);
+                            if (idx > -1) {
+                                monkeys.splice(idx, 1);
+                            }
+                            this.element.remove();
+                            monkeyActive = false;
+                        }
+                        break;
+                }
+                
+                this.updatePosition();
+            }
+        }
+
         const objects = [];
+        const monkeys = [];
+        let monkeyActive = false;
 
         function animate() {
             objects.forEach(obj => obj.update());
+            monkeys.forEach(monkey => monkey.update());
             requestAnimationFrame(animate);
         }
         animate();
@@ -151,12 +292,22 @@
             const isSpider = Math.random() < 0.05;
             const emoji = isSpider ? '🕷️' : '🍌';
             
-            const obj = new FallingObject(x, emoji);
+            const obj = new FallingObject(x, emoji, isSpider);
             objects.push(obj);
             
             if (objects.length > MAX_OBJECTS) {
                 const oldObj = objects.shift();
                 oldObj.remove();
+            }
+            
+            // 检查是否应该生成猴子
+            const bananaCount = objects.filter(o => !o.isSpider).length;
+            if (bananaCount > MONKEY_SPAWN_THRESHOLD && !monkeyActive && monkeys.length === 0) {
+                // 30% 概率生成猴子
+                if (Math.random() < 0.3) {
+                    monkeys.push(new Monkey());
+                    monkeyActive = true;
+                }
             }
         });
     </script>
